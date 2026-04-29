@@ -188,6 +188,7 @@ header {
 .stat-yellow .stat-num { color: var(--yellow); }
 .stat-red .stat-num { color: var(--red); }
 .stat-orange .stat-num { color: var(--orange); }
+.stat-blue .stat-num { color: var(--blue); }
 
 /* SEARCH + FILTERS */
 .controls {
@@ -255,6 +256,8 @@ header {
 .fb.f-avail.active { background: var(--green); border-color: var(--green); }
 .fb.f-busy.active { background: var(--red); border-color: var(--red); }
 .fb.f-partial.active { background: var(--orange); border-color: var(--orange); }
+.fb.f-done.active { background: var(--green); border-color: var(--green); color: #fff; }
+.fb.f-insp.active { background: var(--blue); border-color: var(--blue); color: #fff; }
 
 /* GRID */
 .grid {
@@ -357,14 +360,15 @@ header {
   color: var(--text-dim);
   font-weight: 400;
 }
-.absent-tag {
+.insp-tag {
   font-size: 10px;
   font-weight: 600;
-  color: var(--orange);
-  background: var(--orange-bg);
   padding: 2px 7px;
   border-radius: 4px;
+  white-space: nowrap;
 }
+.insp-tag.yes { background: #dbeafe; color: var(--blue); }
+.insp-tag.no  { background: var(--surface2); color: var(--text-dim); }
 .scout-tag {
   font-size: 10px;
   font-weight: 600;
@@ -608,6 +612,36 @@ header {
 .mab.m-full    { background: var(--green-bg); color: var(--green); border-color: #86efac; }
 .mab.m-partial { background: var(--orange-bg); color: var(--orange); border-color: #fdba74; }
 .mab.m-absent  { background: var(--orange-bg); color: var(--orange); border-color: #fdba74; }
+.mab.m-insp    { background: #dbeafe; color: var(--blue); border-color: #93c5fd; }
+/* inspection section in modal */
+.insp-sec {
+  background: #eff6ff;
+  border: 1.5px solid #bfdbfe;
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.insp-sec-label { font-size: 12px; font-weight: 600; color: var(--blue); }
+.insp-sec-status { font-size: 13px; font-weight: 700; }
+.insp-toggle-btn {
+  background: var(--blue);
+  color: #fff;
+  border: none;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 7px 14px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: opacity .15s;
+}
+.insp-toggle-btn:active { opacity: .8; }
+.insp-toggle-btn.uninspect { background: var(--text-dim); }
 
 /* Loading */
 .ldo {
@@ -743,8 +777,9 @@ header {
     <div class="login-field">
       <label class="login-label">Who are you?</label>
       <select class="login-select" id="loginRole">
-        <option value="">— Select —</option>
-        <option value="254">Team 254 Student</option>
+        <option value="">— Select role —</option>
+        <option value="student">Team 254 Student</option>
+        <option value="admin">Team 254 Admin</option>
       </select>
     </div>
     <div class="login-field">
@@ -787,7 +822,7 @@ header {
   <div class="stat-item stat-green"><div class="stat-num" id="sA">—</div><div class="stat-label">Free</div></div>
   <div class="stat-item stat-yellow"><div class="stat-num" id="sW">—</div><div class="stat-label">Soon</div></div>
   <div class="stat-item stat-red"><div class="stat-num" id="sB">—</div><div class="stat-label">Busy</div></div>
-  <div class="stat-item stat-orange"><div class="stat-num" id="sAb">—</div><div class="stat-label">Gone</div></div>
+  <div class="stat-item stat-blue"><div class="stat-num" id="sIn">—</div><div class="stat-label">Inspected</div></div>
   <div class="stat-item stat-green"><div class="stat-num" id="sSc">—</div><div class="stat-label">Scouted</div></div>
   <div class="stat-item stat-orange"><div class="stat-num" id="sPa">—</div><div class="stat-label">Partial</div></div>
 </div>
@@ -803,7 +838,8 @@ header {
     <button class="fb f-busy" data-f="busy" onclick="sf('busy')">In Match</button>
     <button class="fb" data-f="unscouted" onclick="sf('unscouted')">Unscouted</button>
     <button class="fb f-partial" data-f="partial" onclick="sf('partial')">Partial</button>
-    <button class="fb" data-f="absent" onclick="sf('absent')">Done</button>
+    <button class="fb f-done" data-f="done" onclick="sf('done')">✓ Done</button>
+    <button class="fb f-insp" data-f="inspected" onclick="sf('inspected')">Inspected</button>
   </div>
 </div>
 
@@ -831,17 +867,13 @@ header {
         <div id="mRec"></div>
       </div>
 
-      <div class="abs-sec" id="absSec">
-        <div class="msec-label" style="color:var(--orange)">Mark as Gone</div>
-        <div style="font-size:12px;color:var(--orange)">Team will show as Gone during this time range.</div>
-        <div class="abs-row">
-          <input class="abs-in" id="absF" type="time" placeholder="From">
-          <span style="color:var(--text-dim);font-size:13px">→</span>
-          <input class="abs-in" id="absT" type="time" placeholder="Until">
-          <button class="abs-save" onclick="saveAbs()">Save</button>
+      <!-- Inspection section - visible to all, toggle only for admin -->
+      <div class="insp-sec" id="inspSec">
+        <div>
+          <div class="insp-sec-label">🔍 Robot Inspection</div>
+          <div class="insp-sec-status" id="inspStatus">Not Inspected</div>
         </div>
-        <div class="abs-dis" id="absDis"></div>
-        <button class="abs-clr" onclick="clrAbs()">✕ Clear Absence</button>
+        <button class="insp-toggle-btn" id="inspBtn" onclick="toggleInspection()" style="display:none">Mark Inspected</button>
       </div>
 
       <div class="msec">
@@ -852,7 +884,6 @@ header {
       <div class="m-actions">
         <button class="mab" id="mbF" onclick="tsF()">✓ Fully Scouted</button>
         <button class="mab" id="mbP" onclick="tsP()">◑ Partial</button>
-        
       </div>
     </div>
   </div>
@@ -963,14 +994,13 @@ const TEAMS = [
 let tbaMatches = []; // from TBA
 let completedPractice = {}; // practice match num -> true if completed (from TBA actual_time)
 let scout = JSON.parse(localStorage.getItem('ps_sc') || '{}');
-let absences = JSON.parse(localStorage.getItem('ps_abs') || '{}');
+let inspected = {}; // shared via artifact storage, loaded on init
 let filt = 'all';
 let am = null;
-let absUI = false;
+let currentRole = ''; // 'student' or 'admin'
 
 function sv() {
   localStorage.setItem('ps_sc', JSON.stringify(scout));
-  localStorage.setItem('ps_abs', JSON.stringify(absences));
 }
 
 function ns() { return Math.floor(Date.now() / 1000); }
@@ -1167,7 +1197,8 @@ function rg() {
   else if (filt === 'busy') teams = teams.filter(t => ['busy', 'warning'].includes(teamStatus(t.n).s));
   else if (filt === 'unscouted') teams = teams.filter(t => !scout[t.n]);
   else if (filt === 'partial') teams = teams.filter(t => scout[t.n] === 'partial');
-  else if (filt === 'absent') teams = teams.filter(t => !!absences[t.n]);
+  else if (filt === 'done') teams = teams.filter(t => scout[t.n] === 'full');
+  else if (filt === 'inspected') teams = teams.filter(t => !!inspected[t.n]);
 
   const ord = { available: 0, warning: 1, busy: 2, unknown: 3 };
   teams.sort((a, b) => {
@@ -1180,8 +1211,8 @@ function rg() {
   const all = TEAMS.map(t => teamStatus(t.n));
   document.getElementById('sA').textContent = all.filter(s => s.s === 'available').length;
   document.getElementById('sW').textContent = all.filter(s => s.s === 'warning').length;
-  document.getElementById('sB').textContent = all.filter(s => s.s === 'busy' && !s.absent).length;
-  document.getElementById('sAb').textContent = TEAMS.filter(t => isAbsNow(t.n)).length;
+  document.getElementById('sB').textContent = all.filter(s => s.s === 'busy').length;
+  document.getElementById('sIn').textContent = Object.values(inspected).filter(Boolean).length;
   document.getElementById('sSc').textContent = Object.values(scout).filter(v => v === 'full').length;
   document.getElementById('sPa').textContent = Object.values(scout).filter(v => v === 'partial').length;
 
@@ -1196,22 +1227,24 @@ function rg() {
   g.innerHTML = teams.map(t => {
     const st = teamStatus(t.n);
     const sc2 = scout[t.n] || '';
-    const ha = !!absences[t.n];
+    const isInsp = !!inspected[t.n];
     const av = t.img
       ? `<img class="team-avatar" src="${t.img}" alt="${t.n}" onerror="this.outerHTML='<div class=\\'team-initials\\'>${String(t.n).slice(-3)}</div>'">`
       : `<div class="team-initials">${String(t.n).slice(-3)}</div>`;
 
-    const badgeRight = ha
-      ? `<span class="absent-tag">GONE</span>`
-      : sc2 === 'full'
-        ? `<span class="scout-tag full">✓ Done</span>`
-        : sc2 === 'partial'
-          ? `<span class="scout-tag partial">◑ Partial</span>`
-          : '';
+    const inspBadge = isInsp
+      ? `<span class="insp-tag yes">✓ Inspected</span>`
+      : `<span class="insp-tag no">Not Inspected</span>`;
+
+    const scoutBadge = sc2 === 'full'
+      ? `<span class="scout-tag full">✓ Done</span>`
+      : sc2 === 'partial'
+        ? `<span class="scout-tag partial">◑ Partial</span>`
+        : '';
 
     const timeTag = st.timeEst ? `<div class="time-est">${st.timeEst}</div>` : (st.freeIn ? `<div class="time-est free-in">${st.freeIn}</div>` : '');
 
-    return `<div class="card s-${st.s} ${sc2 ? 'sc-' + sc2 : ''} ${ha ? 'c-absent' : ''}" onclick="om(${t.n})">
+    return `<div class="card s-${st.s} ${sc2 ? 'sc-' + sc2 : ''}" onclick="om(${t.n})">
       <div class="card-body">
         ${av}
         <div class="team-info">
@@ -1219,10 +1252,11 @@ function rg() {
           <div class="team-name">${t.name}</div>
         </div>
         <div class="card-right">
-          ${badgeRight}
+          ${inspBadge}
+          ${scoutBadge}
           <span class="status-pill">${st.label}</span>
           ${timeTag}
-          ${st.rec && !ha && !sc2 ? `<span class="rec-tag ${recCls[st.rec] || ''}">${st.rec === 'go' ? '→ Go' : st.rec === 'rush' ? '⚡ Rush' : '⏳ Wait'}</span>` : ''}
+          ${st.rec && !sc2 ? `<span class="rec-tag ${recCls[st.rec] || ''}">${st.rec === 'go' ? '→ Go' : st.rec === 'rush' ? '⚡ Rush' : '⏳ Wait'}</span>` : ''}
         </div>
       </div>
       <div class="card-actions" onclick="event.stopPropagation()">
@@ -1241,43 +1275,37 @@ function ss(num, type) {
 function tsF() { ss(am, 'full'); }
 function tsP() { ss(am, 'partial'); }
 
-function tAbs() {
-  absUI = !absUI;
-  document.getElementById('absSec').classList.toggle('show', absUI);
-  document.getElementById('mbA').classList.toggle('m-absent', absUI);
-  if (absUI && absences[am]) {
-    document.getElementById('absF').value = absences[am].f || '';
-    document.getElementById('absT').value = absences[am].t || '';
+// ── INSPECTION ─────────────────────────────────────────────────────────────
+// Uses artifact storage so admin changes sync to all devices polling every 30s
+async function loadInspected() {
+  try {
+    const res = await window.storage.get('curie_inspected');
+    if (res && res.value) inspected = JSON.parse(res.value);
+  } catch(e) {
+    // key doesn't exist yet — start fresh
+    inspected = {};
   }
-  shAbs();
 }
 
-function saveAbs() {
-  const f = document.getElementById('absF').value;
-  const t2 = document.getElementById('absT').value;
-  if (!f || !t2) return;
-  absences[am] = { f, t: t2 };
-  sv(); shAbs(); rg();
+async function saveInspected() {
+  try {
+    await window.storage.set('curie_inspected', JSON.stringify(inspected));
+  } catch(e) {
+    console.warn('Storage save failed:', e);
+  }
 }
 
-function clrAbs() {
-  delete absences[am];
-  sv();
-  document.getElementById('absF').value = '';
-  document.getElementById('absT').value = '';
-  shAbs(); rg();
-}
-
-function shAbs() {
-  const a = absences[am];
-  document.getElementById('absDis').textContent = a ? `Set: ${a.f} – ${a.t}` : '';
+async function toggleInspection() {
+  if (currentRole !== 'admin') return;
+  inspected[am] = !inspected[am];
+  if (!inspected[am]) delete inspected[am];
+  await saveInspected();
+  rg();
+  rm();
 }
 
 function om(num) {
   am = num;
-  absUI = false;
-  document.getElementById('absSec').classList.remove('show');
-  document.getElementById('mbA').classList.remove('m-absent');
   rm();
   document.getElementById('modalBg').classList.add('open');
   document.getElementById('modalEl').scrollTop = 0;
@@ -1289,6 +1317,7 @@ function rm() {
   const st = teamStatus(num);
   const mlist = getTeamMatches(num);
   const sc2 = scout[num] || '';
+  const isInsp = !!inspected[num];
   const now = ns();
 
   document.getElementById('mNum').textContent = num;
@@ -1311,6 +1340,20 @@ function rm() {
   recEl.innerHTML = st.rec
     ? `<div class="m-rec-box ${recCls2[st.rec] || ''}">${recIcon[st.rec] || ''} ${st.recText}</div>`
     : '';
+
+  // Inspection section
+  const inspStatus = document.getElementById('inspStatus');
+  const inspBtn = document.getElementById('inspBtn');
+  inspStatus.textContent = isInsp ? '✓ Inspected' : 'Not Yet Inspected';
+  inspStatus.style.color = isInsp ? 'var(--blue)' : 'var(--text-dim)';
+  // Only show toggle button for admin
+  if (currentRole === 'admin') {
+    inspBtn.style.display = 'block';
+    inspBtn.textContent = isInsp ? 'Mark Not Inspected' : 'Mark Inspected';
+    inspBtn.className = 'insp-toggle-btn' + (isInsp ? ' uninspect' : '');
+  } else {
+    inspBtn.style.display = 'none';
+  }
 
   // Match list
   const ma = document.getElementById('mMa');
@@ -1349,11 +1392,6 @@ function rm() {
   document.getElementById('mbF').textContent = sc2 === 'full' ? '✓ Scouted (undo)' : '✓ Fully Scouted';
   document.getElementById('mbP').className = 'mab' + (sc2 === 'partial' ? ' m-partial' : '');
   document.getElementById('mbP').textContent = sc2 === 'partial' ? '◑ Partial (undo)' : '◑ Partial Scout';
-  shAbs();
-  if (absUI && absences[num]) {
-    document.getElementById('absF').value = absences[num].f || '';
-    document.getElementById('absT').value = absences[num].t || '';
-  }
 }
 
 function cbg(e) { if (e.target === document.getElementById('modalBg')) cm(); }
@@ -1379,18 +1417,19 @@ async function fetchTBA() {
     if (!r.ok) throw new Error('HTTP ' + r.status);
     return await r.json();
   } catch (e) {
-    // TBA may not have this event live yet — silently fall back to hardcoded schedule
     console.warn('TBA unavailable, using hardcoded schedule:', e.message);
     return null;
   }
 }
 
 async function refreshData() {
+  // Pull latest inspection state from shared storage
+  await loadInspected();
+
   const d = await fetchTBA();
   if (d) {
     tbaMatches = d;
     showErr(null);
-    // Update completed practice match map from TBA data
     d.filter(isp).forEach(m => {
       if (m.actual_time) {
         const key = m.key || '';
@@ -1401,17 +1440,18 @@ async function refreshData() {
   }
   document.getElementById('lastUpd').textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   rg();
-  if (am) rm(); // refresh modal if open
+  if (am) rm();
 }
 
-const AUTH_PASS = 'scout2026';
+const PASSWORDS = { student: 'scout2026', admin: 'curiepits' };
 
 function doLogin() {
   const role = document.getElementById('loginRole').value;
   const pass = document.getElementById('loginPass').value;
   const err  = document.getElementById('loginErr');
-  if (role === '254' && pass === AUTH_PASS) {
-    sessionStorage.setItem('pit_auth', '1');
+  if (role && PASSWORDS[role] && pass === PASSWORDS[role]) {
+    sessionStorage.setItem('pit_auth', role);
+    currentRole = role;
     document.getElementById('loginScreen').classList.add('hidden');
     err.classList.remove('show');
     init();
@@ -1424,6 +1464,7 @@ function doLogin() {
 
 function doLogout() {
   sessionStorage.removeItem('pit_auth');
+  currentRole = '';
   document.getElementById('loginScreen').classList.remove('hidden');
   document.getElementById('loginPass').value = '';
   document.getElementById('loginRole').value = '';
@@ -1431,33 +1472,27 @@ function doLogout() {
 }
 
 function checkAuth() {
-  if (sessionStorage.getItem('pit_auth') === '1') {
+  const role = sessionStorage.getItem('pit_auth');
+  if (role === 'student' || role === 'admin') {
+    currentRole = role;
     document.getElementById('loginScreen').classList.add('hidden');
     return true;
   }
   return false;
 }
 
-
 async function init() {
-  // Immediately render with hardcoded practice data so the app is usable instantly
   rg();
   document.getElementById('ldo').style.display = 'none';
-
-  // Then fetch from TBA
+  await loadInspected();
   await refreshData();
-
-  // Auto-refresh every 60s
-  setInterval(refreshData, 60000);
-  // Also refresh display every 30s for countdown timers
+  setInterval(refreshData, 30000); // poll every 30s so students get inspection updates fast
   setInterval(rg, 30000);
 }
 
-// Only auto-init if already authenticated
 if (checkAuth()) {
   init();
 } else {
-  // Hide loading spinner so login screen shows cleanly
   document.getElementById('ldo').style.display = 'none';
 }
 </script>
